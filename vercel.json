@@ -8,6 +8,13 @@
   ],
   "routes": [
     {
+      "src": "/(.*\\.(html|css|js|png|jpg|jpeg|svg|ico))",
+      "headers": {
+        "cache-control": "public, max-age=3600"
+      },
+      "continue": true
+    },
+    {
       "src": "/(.*)",
       "dest": "app.js"
     }
