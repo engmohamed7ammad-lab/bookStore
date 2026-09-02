@@ -8,7 +8,7 @@ const connectDB = require("./config/db");
 const errorHandler = require("./middleware/error.middleware");
 
 const app = express();
-
+app.set("trust proxy", 1);
 
 //  DATABASE 
 
@@ -29,15 +29,15 @@ app.use(cors());
 // ================= RATE LIMITING =================
 
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-
-    max: 100, // Maximum 100 requests per IP
-
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    keyGenerator: (req) => {
+        return req.ip;
+    },
     message: {
         message: "Too many requests, please try again later."
     }
 });
-
 app.use(limiter);
 
 //  ROUTES 
