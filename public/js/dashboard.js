@@ -5,17 +5,33 @@
 const token = localStorage.getItem("token");
 const userData = localStorage.getItem("user");
 
-
+// Check authentication
 if (!token || !userData) {
-
     window.location.href = "/";
-
     throw new Error("User is not authenticated");
-
 }
 
+// Parse user data
+let user;
 
-const user = JSON.parse(userData);
+try {
+    user = JSON.parse(userData);
+} catch (error) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    window.location.href = "/";
+    throw new Error("Invalid user data");
+}
+
+// Validate user object
+if (!user || !user.id || !user.role) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    window.location.href = "/";
+    throw new Error("Invalid user information");
+}
 
 
 // =================================================
@@ -23,169 +39,41 @@ const user = JSON.parse(userData);
 // =================================================
 
 // User info
-
-const userName =
-    document.getElementById("userName");
-
-const userEmail =
-    document.getElementById("userEmail");
-
-const userRole =
-    document.getElementById("userRole");
-
+const userName = document.getElementById("userName");
+const userEmail = document.getElementById("userEmail");
+const userRole = document.getElementById("userRole");
 
 // Dashboard
-
-const booksContainer =
-    document.getElementById("booksContainer");
-
-const logoutBtn =
-    document.getElementById("logoutBtn");
-
+const booksContainer = document.getElementById("booksContainer");
+const logoutBtn = document.getElementById("logoutBtn");
 
 // Admin
-
-const adminPanel =
-    document.getElementById("adminPanel");
-
-const addBookBtn =
-    document.getElementById("addBookBtn");
-
+const adminPanel = document.getElementById("adminPanel");
+const addBookBtn = document.getElementById("addBookBtn");
 
 // Users
-
-const usersSection =
-    document.getElementById("usersSection");
-
-const usersContainer =
-    document.getElementById("usersContainer");
-
-const refreshUsersBtn =
-    document.getElementById("refreshUsersBtn");
-
+const usersSection = document.getElementById("usersSection");
+const usersContainer = document.getElementById("usersContainer");
+const refreshUsersBtn = document.getElementById("refreshUsersBtn");
 
 // Book Modal
+const bookModal = document.getElementById("bookModal");
+const modalTitle = document.getElementById("modalTitle");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const bookForm = document.getElementById("bookForm");
+const cancelBookBtn = document.getElementById("cancelBookBtn");
+const bookMessage = document.getElementById("bookMessage");
 
-const bookModal =
-    document.getElementById("bookModal");
-
-const modalTitle =
-    document.getElementById("modalTitle");
-
-const closeModalBtn =
-    document.getElementById("closeModalBtn");
-
-const bookForm =
-    document.getElementById("bookForm");
-
-const cancelBookBtn =
-    document.getElementById("cancelBookBtn");
-
-const bookMessage =
-    document.getElementById("bookMessage");
-
-
-// Delete Book Modal
-
-const deleteModal =
-    document.getElementById("deleteModal");
-
+// Delete Modal
+const deleteModal = document.getElementById("deleteModal");
 const closeDeleteModalBtn =
-    document.getElementById(
-        "closeDeleteModalBtn"
-    );
-
+    document.getElementById("closeDeleteModalBtn");
 const confirmDeleteBtn =
-    document.getElementById(
-        "confirmDeleteBtn"
-    );
-
+    document.getElementById("confirmDeleteBtn");
 const cancelDeleteBtn =
-    document.getElementById(
-        "cancelDeleteBtn"
-    );
-
+    document.getElementById("cancelDeleteBtn");
 const deleteMessage =
-    document.getElementById(
-        "deleteMessage"
-    );
-
-
-// User Modal
-
-const userModal =
-    document.getElementById("userModal");
-
-const closeUserModalBtn =
-    document.getElementById(
-        "closeUserModalBtn"
-    );
-
-const userForm =
-    document.getElementById("userForm");
-
-const cancelUserBtn =
-    document.getElementById(
-        "cancelUserBtn"
-    );
-
-const userEditName =
-    document.getElementById(
-        "userEditName"
-    );
-
-const userEditEmail =
-    document.getElementById(
-        "userEditEmail"
-    );
-
-const userEditPassword =
-    document.getElementById(
-        "userEditPassword"
-    );
-
-const userEditRole =
-    document.getElementById(
-        "userEditRole"
-    );
-
-const userMessage =
-    document.getElementById(
-        "userMessage"
-    );
-
-
-// Delete User Modal
-
-const deleteUserModal =
-    document.getElementById(
-        "deleteUserModal"
-    );
-
-const closeDeleteUserModalBtn =
-    document.getElementById(
-        "closeDeleteUserModalBtn"
-    );
-
-const confirmDeleteUserBtn =
-    document.getElementById(
-        "confirmDeleteUserBtn"
-    );
-
-const cancelDeleteUserBtn =
-    document.getElementById(
-        "cancelDeleteUserBtn"
-    );
-
-const deleteUserMessage =
-    document.getElementById(
-        "deleteUserMessage"
-    );
-
-const deleteUserText =
-    document.getElementById(
-        "deleteUserText"
-    );
+    document.getElementById("deleteMessage");
 
 
 // =================================================
@@ -193,206 +81,155 @@ const deleteUserText =
 // =================================================
 
 let editingBookId = null;
-
 let deletingBookId = null;
 
-let editingUserId = null;
 
-let deletingUserId = null;
+// =================================================
+// ================= USER INFO =====================
+// =================================================
+
+userName.textContent = user.name || "User";
+userEmail.textContent = user.email || "No email";
+userRole.textContent = user.role;
 
 
 // =================================================
-// ================= USER INFO ======================
+// ================= ADMIN CHECK ===================
 // =================================================
 
-userName.textContent =
-    user.name;
+const isAdmin = user.role === "admin";
 
-userEmail.textContent =
-    user.email;
-
-userRole.textContent =
-    user.role;
-
-
-// =================================================
-// ================= ADMIN CHECK ====================
-// =================================================
-
-if (user.role !== "admin") {
-
-    adminPanel.style.display =
-        "none";
-
-    usersSection.style.display =
-        "none";
-
+if (!isAdmin) {
+    adminPanel.style.display = "none";
+    usersSection.style.display = "none";
 }
 
 
 // =================================================
-// ================= LOGOUT ========================
-// =================================================
-
-function logout() {
-
-    localStorage.removeItem("token");
-
-    localStorage.removeItem("user");
-
-    window.location.href = "/";
-
-}
-
-
-logoutBtn.addEventListener(
-    "click",
-    logout
-);
-
-
-// =================================================
-// ================= GET BOOKS ======================
+// ================= GET BOOKS =====================
 // =================================================
 
 async function getBooks() {
-
     try {
+        booksContainer.textContent = "Loading books...";
 
-        const response =
-            await fetch("/books", {
+        const response = await fetch("/books", {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
 
-                method: "GET",
+        const data = await response.json();
 
-                headers: {
-
-                    Authorization:
-                        `Bearer ${token}`
-
-                }
-
-            });
-
-
-        const data =
-            await response.json();
-
-
+        // Token expired / invalid
         if (response.status === 401) {
-
             logout();
-
             return;
-
         }
-
 
         if (!response.ok) {
-
             booksContainer.textContent =
-                data.message ||
-                "Failed to load books";
-
+                data.message || "Failed to load books";
             return;
-
         }
-
 
         displayBooks(data);
 
-
     } catch (error) {
-
-        console.error(
-            "Get books error:",
-            error
-        );
+        console.error("Get books error:", error);
 
         booksContainer.textContent =
-            "Something went wrong.";
-
+            "Something went wrong while loading books.";
     }
-
 }
 
 
 // =================================================
-// ================= DISPLAY BOOKS ==================
+// ================= DISPLAY BOOKS =================
 // =================================================
 
 function displayBooks(books) {
-
     booksContainer.innerHTML = "";
 
-
-    if (
-        !Array.isArray(books) ||
-        books.length === 0
-    ) {
-
-        booksContainer.textContent =
-            "No books available.";
-
+    if (!Array.isArray(books) || books.length === 0) {
+        booksContainer.textContent = "No books available.";
         return;
-
     }
 
+    books.forEach((book) => {
 
-    books.forEach(book => {
+        // ================= CARD =================
 
-        const card =
-            document.createElement("div");
-
-        card.className =
-            "book-card";
+        const bookCard = document.createElement("div");
+        bookCard.className = "book-card";
 
 
-        const title =
-            document.createElement("h3");
+        // ================= TITLE =================
 
-        title.textContent =
-            book.title;
+        const title = document.createElement("h3");
+        title.textContent = book.title || "Untitled";
 
 
-        const price =
-            document.createElement("p");
+        // ================= PRICE =================
+
+        const price = document.createElement("p");
+
+        const formattedPrice =
+            Number(book.price).toFixed(2);
 
         price.innerHTML =
-            `Price: <strong>$${book.price}</strong>`;
+            `Price: <strong>$${formattedPrice}</strong>`;
 
 
-        const author =
-            document.createElement("p");
+        // ================= AUTHOR =================
+
+        const author = document.createElement("p");
+
+        let authorName = "Unknown";
+
+        if (typeof book.author === "string") {
+            authorName = book.author;
+        } else if (
+            book.author &&
+            typeof book.author === "object"
+        ) {
+            authorName =
+                book.author.name ||
+                book.author.email ||
+                "Unknown";
+        }
 
         author.textContent =
-            `Author: ${book.author}`;
+            `Author: ${authorName}`;
 
 
-        card.appendChild(title);
+        // ================= APPEND =================
 
-        card.appendChild(price);
+        bookCard.appendChild(title);
+        bookCard.appendChild(price);
+        bookCard.appendChild(author);
 
-        card.appendChild(author);
 
+        // =================================================
+        // ================= ADMIN ACTIONS =================
+        // =================================================
 
-        if (user.role === "admin") {
+        if (isAdmin) {
 
             const actions =
                 document.createElement("div");
 
-            actions.className =
-                "book-actions";
+            actions.className = "book-actions";
 
+
+            // ================= EDIT =================
 
             const editButton =
                 document.createElement("button");
 
-            editButton.textContent =
-                "Edit";
-
-            editButton.className =
-                "edit-btn";
-
+            editButton.textContent = "Edit";
+            editButton.className = "edit-btn";
 
             editButton.addEventListener(
                 "click",
@@ -400,126 +237,103 @@ function displayBooks(books) {
             );
 
 
+            // ================= DELETE ==============
+
             const deleteButton =
                 document.createElement("button");
 
-            deleteButton.textContent =
-                "Delete";
-
-            deleteButton.className =
-                "delete-btn";
-
+            deleteButton.textContent = "Delete";
+            deleteButton.className = "delete-btn";
 
             deleteButton.addEventListener(
                 "click",
-                () =>
-                    openDeleteModal(book._id)
+                () => openDeleteModal(book._id)
             );
 
 
             actions.appendChild(editButton);
-
             actions.appendChild(deleteButton);
 
-            card.appendChild(actions);
-
+            bookCard.appendChild(actions);
         }
 
 
-        booksContainer.appendChild(card);
-
+        booksContainer.appendChild(bookCard);
     });
-
 }
 
 
 // =================================================
-// ================= ADD BOOK =======================
+// ================= OPEN ADD MODAL ===============
 // =================================================
 
-addBookBtn.addEventListener(
-    "click",
-    () => {
+if (addBookBtn) {
+    addBookBtn.addEventListener("click", () => {
 
         editingBookId = null;
 
-        modalTitle.textContent =
-            "Add New Book";
+        modalTitle.textContent = "Add New Book";
 
         bookForm.reset();
 
-        bookMessage.textContent =
-            "";
+        bookMessage.textContent = "";
 
-        bookModal.style.display =
-            "flex";
-
-    }
-);
+        bookModal.style.display = "flex";
+    });
+}
 
 
 // =================================================
-// ================= CLOSE BOOK MODAL ==============
+// ================= CLOSE BOOK MODAL =============
 // =================================================
 
 function closeBookModal() {
 
-    bookModal.style.display =
-        "none";
+    bookModal.style.display = "none";
 
     bookForm.reset();
 
-    bookMessage.textContent =
-        "";
+    bookMessage.textContent = "";
 
     editingBookId = null;
-
 }
-
 
 closeModalBtn.addEventListener(
     "click",
     closeBookModal
 );
 
-
 cancelBookBtn.addEventListener(
     "click",
     closeBookModal
 );
 
-
 bookModal.addEventListener(
     "click",
-    event => {
+    (event) => {
 
         if (event.target === bookModal) {
-
             closeBookModal();
-
         }
-
     }
 );
 
 
 // =================================================
-// ================= SAVE BOOK ======================
+// ================= SAVE BOOK =====================
 // =================================================
 
 bookForm.addEventListener(
     "submit",
-    async event => {
+    async (event) => {
 
         event.preventDefault();
-
 
         const title =
             document
                 .getElementById("bookTitle")
                 .value
                 .trim();
-
 
         const price =
             Number(
@@ -528,7 +342,6 @@ bookForm.addEventListener(
                     .value
             );
 
-
         const author =
             document
                 .getElementById("bookAuthor")
@@ -536,122 +349,104 @@ bookForm.addEventListener(
                 .trim();
 
 
-        if (!title || !author || price < 1) {
+        // ================= VALIDATION =============
 
+        if (!title || !author) {
             bookMessage.textContent =
-                "Please fill in all fields correctly.";
-
+                "Please fill in all fields.";
             return;
+        }
 
+        if (title.length < 2) {
+            bookMessage.textContent =
+                "Title must contain at least 2 characters.";
+            return;
+        }
+
+        if (!Number.isFinite(price) || price < 1) {
+            bookMessage.textContent =
+                "Price must be at least 1.";
+            return;
         }
 
 
         try {
 
-            let response;
+            const url = editingBookId
+                ? `/books/${editingBookId}`
+                : "/books";
+
+            const method = editingBookId
+                ? "PUT"
+                : "POST";
 
 
-            if (editingBookId) {
+            const response = await fetch(url, {
+                method,
 
-                response =
-                    await fetch(
-                        `/books/${editingBookId}`,
-                        {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
 
-                            method: "PUT",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json",
-
-                                Authorization:
-                                    `Bearer ${token}`
-
-                            },
-
-                            body:
-                                JSON.stringify({
-                                    title,
-                                    price,
-                                    author
-                                })
-
-                        }
-                    );
-
-            } else {
-
-                response =
-                    await fetch(
-                        "/books",
-                        {
-
-                            method: "POST",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json",
-
-                                Authorization:
-                                    `Bearer ${token}`
-
-                            },
-
-                            body:
-                                JSON.stringify({
-                                    title,
-                                    price,
-                                    author
-                                })
-
-                        }
-                    );
-
-            }
+                body: JSON.stringify({
+                    title,
+                    price,
+                    author
+                })
+            });
 
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
+
+            // ================= AUTH ================
 
             if (response.status === 401) {
-
                 logout();
-
                 return;
-
             }
 
+
+            // ================= ADMIN ===============
 
             if (response.status === 403) {
-
                 bookMessage.textContent =
-                    "Access denied.";
-
+                    "Access denied. Admin only.";
                 return;
-
             }
 
+
+            // ================= ERROR ===============
 
             if (!response.ok) {
 
-                bookMessage.textContent =
-                    data.errors
-                        ? data.errors.join(" | ")
-                        : data.message ||
-                          "Operation failed";
+                if (data.errors) {
+
+                    if (Array.isArray(data.errors)) {
+                        bookMessage.textContent =
+                            data.errors.join(" | ");
+                    } else {
+                        bookMessage.textContent =
+                            data.errors;
+                    }
+
+                } else {
+
+                    bookMessage.textContent =
+                        data.message ||
+                        "Operation failed.";
+                }
 
                 return;
-
             }
 
+
+            // ================= SUCCESS =============
 
             closeBookModal();
 
             await getBooks();
-
 
         } catch (error) {
 
@@ -662,15 +457,13 @@ bookForm.addEventListener(
 
             bookMessage.textContent =
                 "Something went wrong.";
-
         }
-
     }
 );
 
 
 // =================================================
-// ================= EDIT BOOK ======================
+// ================= EDIT BOOK =====================
 // =================================================
 
 async function editBook(id) {
@@ -681,16 +474,12 @@ async function editBook(id) {
             await fetch(
                 `/books/${id}`,
                 {
-
                     method: "GET",
 
                     headers: {
-
                         Authorization:
                             `Bearer ${token}`
-
                     }
-
                 }
             );
 
@@ -700,11 +489,8 @@ async function editBook(id) {
 
 
         if (response.status === 401) {
-
             logout();
-
             return;
-
         }
 
 
@@ -712,46 +498,58 @@ async function editBook(id) {
 
             alert(
                 book.message ||
-                "Failed to get book"
+                "Failed to get book."
             );
 
             return;
-
         }
 
 
-        editingBookId =
-            id;
-
+        editingBookId = id;
 
         modalTitle.textContent =
             "Edit Book";
 
 
-        document
-            .getElementById("bookTitle")
-            .value =
-            book.title;
+        document.getElementById(
+            "bookTitle"
+        ).value =
+            book.title || "";
 
 
-        document
-            .getElementById("bookPrice")
-            .value =
-            book.price;
+        document.getElementById(
+            "bookPrice"
+        ).value =
+            book.price || "";
 
 
-        document
-            .getElementById("bookAuthor")
-            .value =
-            book.author;
+        let authorName = "";
+
+        if (typeof book.author === "string") {
+
+            authorName = book.author;
+
+        } else if (
+            book.author &&
+            typeof book.author === "object"
+        ) {
+
+            authorName =
+                book.author.name ||
+                book.author.email ||
+                "";
+        }
 
 
-        bookMessage.textContent =
-            "";
+        document.getElementById(
+            "bookAuthor"
+        ).value =
+            authorName;
 
 
-        bookModal.style.display =
-            "flex";
+        bookMessage.textContent = "";
+
+        bookModal.style.display = "flex";
 
 
     } catch (error) {
@@ -764,41 +562,31 @@ async function editBook(id) {
         alert(
             "Something went wrong."
         );
-
     }
-
 }
 
 
 // =================================================
-// ================= DELETE BOOK ====================
+// ================= DELETE MODAL ==================
 // =================================================
 
 function openDeleteModal(id) {
 
-    deletingBookId =
-        id;
+    deletingBookId = id;
 
-    deleteMessage.textContent =
-        "";
+    deleteMessage.textContent = "";
 
-    deleteModal.style.display =
-        "flex";
-
+    deleteModal.style.display = "flex";
 }
 
 
 function closeDeleteModal() {
 
-    deleteModal.style.display =
-        "none";
+    deleteModal.style.display = "none";
 
-    deletingBookId =
-        null;
+    deletingBookId = null;
 
-    deleteMessage.textContent =
-        "";
-
+    deleteMessage.textContent = "";
 }
 
 
@@ -806,7 +594,6 @@ closeDeleteModalBtn.addEventListener(
     "click",
     closeDeleteModal
 );
-
 
 cancelDeleteBtn.addEventListener(
     "click",
@@ -816,20 +603,17 @@ cancelDeleteBtn.addEventListener(
 
 deleteModal.addEventListener(
     "click",
-    event => {
+    (event) => {
 
         if (event.target === deleteModal) {
-
             closeDeleteModal();
-
         }
-
     }
 );
 
 
 // =================================================
-// ================= CONFIRM DELETE BOOK ===========
+// ================= CONFIRM DELETE ================
 // =================================================
 
 confirmDeleteBtn.addEventListener(
@@ -837,16 +621,13 @@ confirmDeleteBtn.addEventListener(
     async () => {
 
         if (!deletingBookId) {
-
             return;
-
         }
 
 
         try {
 
-            confirmDeleteBtn.disabled =
-                true;
+            confirmDeleteBtn.disabled = true;
 
             confirmDeleteBtn.textContent =
                 "Deleting...";
@@ -856,16 +637,12 @@ confirmDeleteBtn.addEventListener(
                 await fetch(
                     `/books/${deletingBookId}`,
                     {
-
                         method: "DELETE",
 
                         headers: {
-
                             Authorization:
                                 `Bearer ${token}`
-
                         }
-
                     }
                 );
 
@@ -875,21 +652,17 @@ confirmDeleteBtn.addEventListener(
 
 
             if (response.status === 401) {
-
                 logout();
-
                 return;
-
             }
 
 
             if (response.status === 403) {
 
                 deleteMessage.textContent =
-                    "Access denied.";
+                    "Access denied. Admin only.";
 
                 return;
-
             }
 
 
@@ -897,10 +670,9 @@ confirmDeleteBtn.addEventListener(
 
                 deleteMessage.textContent =
                     data.message ||
-                    "Failed to delete book";
+                    "Failed to delete book.";
 
                 return;
-
             }
 
 
@@ -919,33 +691,25 @@ confirmDeleteBtn.addEventListener(
             deleteMessage.textContent =
                 "Something went wrong.";
 
-        }
+        } finally {
 
-
-        finally {
-
-            confirmDeleteBtn.disabled =
-                false;
+            confirmDeleteBtn.disabled = false;
 
             confirmDeleteBtn.textContent =
                 "Delete";
-
         }
-
     }
 );
 
 
 // =================================================
-// ================= GET USERS ======================
+// ================= GET USERS =====================
 // =================================================
 
 async function getUsers() {
 
-    if (user.role !== "admin") {
-
+    if (!isAdmin) {
         return;
-
     }
 
 
@@ -959,16 +723,12 @@ async function getUsers() {
             await fetch(
                 "/users",
                 {
-
                     method: "GET",
 
                     headers: {
-
                         Authorization:
                             `Bearer ${token}`
-
                     }
-
                 }
             );
 
@@ -978,21 +738,17 @@ async function getUsers() {
 
 
         if (response.status === 401) {
-
             logout();
-
             return;
-
         }
 
 
         if (response.status === 403) {
 
             usersContainer.textContent =
-                "Access denied.";
+                "Access denied. Admin only.";
 
             return;
-
         }
 
 
@@ -1000,10 +756,9 @@ async function getUsers() {
 
             usersContainer.textContent =
                 data.message ||
-                "Failed to load users";
+                "Failed to load users.";
 
             return;
-
         }
 
 
@@ -1019,14 +774,12 @@ async function getUsers() {
 
         usersContainer.textContent =
             "Something went wrong.";
-
     }
-
 }
 
 
 // =================================================
-// ================= DISPLAY USERS ==================
+// ================= DISPLAY USERS =================
 // =================================================
 
 function displayUsers(users) {
@@ -1043,7 +796,6 @@ function displayUsers(users) {
             "No users found.";
 
         return;
-
     }
 
 
@@ -1054,20 +806,24 @@ function displayUsers(users) {
         "users-table";
 
 
+    // ================= THEAD =====================
+
     const thead =
         document.createElement("thead");
-
 
     const headerRow =
         document.createElement("tr");
 
 
-    [
+    const headers = [
         "Name",
         "Email",
         "Role",
         "Actions"
-    ].forEach(header => {
+    ];
+
+
+    headers.forEach((header) => {
 
         const th =
             document.createElement("th");
@@ -1076,60 +832,46 @@ function displayUsers(users) {
             header;
 
         headerRow.appendChild(th);
-
     });
 
 
     thead.appendChild(headerRow);
 
 
+    // ================= TBODY =====================
+
     const tbody =
         document.createElement("tbody");
 
 
-    users.forEach(currentUser => {
+    users.forEach((currentUser) => {
 
         const row =
             document.createElement("tr");
 
 
-        // Current logged-in user
-
-        if (
-            currentUser._id === user.id ||
-            currentUser._id === user._id
-        ) {
-
-            row.classList.add(
-                "current-user"
-            );
-
-        }
-
-
-        // Name
+        // ================= NAME =================
 
         const nameCell =
             document.createElement("td");
 
         nameCell.textContent =
-            currentUser.name;
+            currentUser.name || "Unknown";
 
 
-        // Email
+        // ================= EMAIL ================
 
         const emailCell =
             document.createElement("td");
 
         emailCell.textContent =
-            currentUser.email;
+            currentUser.email || "Unknown";
 
 
-        // Role
+        // ================= ROLE =================
 
         const roleCell =
             document.createElement("td");
-
 
         const role =
             document.createElement("span");
@@ -1138,17 +880,15 @@ function displayUsers(users) {
             "user-role";
 
         role.textContent =
-            currentUser.role;
-
+            currentUser.role || "user";
 
         roleCell.appendChild(role);
 
 
-        // Actions
+        // ================= ACTIONS ==============
 
         const actionsCell =
             document.createElement("td");
-
 
         const actions =
             document.createElement("div");
@@ -1157,7 +897,7 @@ function displayUsers(users) {
             "user-actions";
 
 
-        // Edit button
+        // ================= EDIT =================
 
         const editButton =
             document.createElement("button");
@@ -1171,14 +911,11 @@ function displayUsers(users) {
 
         editButton.addEventListener(
             "click",
-            () =>
-                openEditUserModal(
-                    currentUser
-                )
+            () => editUser(currentUser)
         );
 
 
-        // Delete button
+        // ================= DELETE ==============
 
         const deleteButton =
             document.createElement("button");
@@ -1190,474 +927,367 @@ function displayUsers(users) {
             "user-delete-btn";
 
 
-        if (
-            currentUser._id === user.id ||
-            currentUser._id === user._id
-        ) {
+        // Prevent deleting yourself
+        const isCurrentUser =
+            String(currentUser._id) ===
+            String(user.id);
 
-            deleteButton.style.display =
-                "none";
 
+        if (isCurrentUser) {
+
+            deleteButton.disabled = true;
+
+            deleteButton.title =
+                "You cannot delete your own account";
         }
 
 
         deleteButton.addEventListener(
             "click",
-            () =>
-                openDeleteUserModal(
-                    currentUser
-                )
+            () => {
+
+                if (isCurrentUser) {
+                    return;
+                }
+
+                deleteUser(currentUser._id);
+            }
         );
 
 
         actions.appendChild(editButton);
-
         actions.appendChild(deleteButton);
 
         actionsCell.appendChild(actions);
 
 
         row.appendChild(nameCell);
-
         row.appendChild(emailCell);
-
         row.appendChild(roleCell);
-
         row.appendChild(actionsCell);
 
-
         tbody.appendChild(row);
-
     });
 
 
     table.appendChild(thead);
-
     table.appendChild(tbody);
 
-
     usersContainer.appendChild(table);
-
 }
 
 
 // =================================================
-// ================= EDIT USER MODAL ================
+// ================= EDIT USER =====================
 // =================================================
 
-function openEditUserModal(currentUser) {
+async function editUser(currentUser) {
 
-    editingUserId =
-        currentUser._id;
-
-
-    userEditName.value =
-        currentUser.name;
-
-
-    userEditEmail.value =
-        currentUser.email;
+    const newName =
+        prompt(
+            "Enter new name:",
+            currentUser.name || ""
+        );
 
 
-    userEditPassword.value =
-        "";
-
-
-    userEditRole.value =
-        currentUser.role;
-
-
-    userMessage.textContent =
-        "";
-
-
-    userModal.style.display =
-        "flex";
-
-}
-
-
-function closeUserModal() {
-
-    userModal.style.display =
-        "none";
-
-    userForm.reset();
-
-    userMessage.textContent =
-        "";
-
-    editingUserId =
-        null;
-
-}
-
-
-closeUserModalBtn.addEventListener(
-    "click",
-    closeUserModal
-);
-
-
-cancelUserBtn.addEventListener(
-    "click",
-    closeUserModal
-);
-
-
-userModal.addEventListener(
-    "click",
-    event => {
-
-        if (event.target === userModal) {
-
-            closeUserModal();
-
-        }
-
+    if (newName === null) {
+        return;
     }
-);
 
 
-// =================================================
-// ================= SAVE USER ======================
-// =================================================
-
-userForm.addEventListener(
-    "submit",
-    async event => {
-
-        event.preventDefault();
+    const newEmail =
+        prompt(
+            "Enter new email:",
+            currentUser.email || ""
+        );
 
 
-        if (!editingUserId) {
-
-            return;
-
-        }
+    if (newEmail === null) {
+        return;
+    }
 
 
-        const name =
-            userEditName.value.trim();
+    const newPassword =
+        prompt(
+            "Enter new password or leave empty:",
+            ""
+        );
 
 
-        const email =
-            userEditEmail.value.trim();
+    if (newPassword === null) {
+        return;
+    }
 
 
-        const password =
-            userEditPassword.value.trim();
+    // ================= VALIDATION ================
+
+    if (!newName.trim()) {
+
+        alert(
+            "Name cannot be empty."
+        );
+
+        return;
+    }
 
 
-        const role =
-            userEditRole.value;
+    if (!newEmail.trim()) {
+
+        alert(
+            "Email cannot be empty."
+        );
+
+        return;
+    }
 
 
-        if (!name || !email) {
-
-            userMessage.textContent =
-                "Name and email are required.";
-
-            return;
-
-        }
-
+    try {
 
         const updateData = {
-
-            name,
-            email,
-            role
-
+            name: newName.trim(),
+            email: newEmail.trim()
         };
 
 
-        if (password) {
+        if (newPassword.trim()) {
 
             updateData.password =
-                password;
-
+                newPassword.trim();
         }
 
 
-        try {
+        const response =
+            await fetch(
+                `/users/${currentUser._id}`,
+                {
+                    method: "PUT",
 
-            const response =
-                await fetch(
-                    `/users/${editingUserId}`,
-                    {
+                    headers: {
+                        "Content-Type":
+                            "application/json",
 
-                        method: "PUT",
+                        Authorization:
+                            `Bearer ${token}`
+                    },
 
-                        headers: {
-
-                            "Content-Type":
-                                "application/json",
-
-                            Authorization:
-                                `Bearer ${token}`
-
-                        },
-
-                        body:
-                            JSON.stringify(
-                                updateData
-                            )
-
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (response.status === 401) {
-
-                logout();
-
-                return;
-
-            }
-
-
-            if (response.status === 403) {
-
-                userMessage.textContent =
-                    "Access denied.";
-
-                return;
-
-            }
-
-
-            if (!response.ok) {
-
-                userMessage.textContent =
-                    data.errors
-                        ? data.errors.join(" | ")
-                        : data.message ||
-                          "Failed to update user";
-
-                return;
-
-            }
-
-
-            closeUserModal();
-
-            await getUsers();
-
-
-        } catch (error) {
-
-            console.error(
-                "Update user error:",
-                error
+                    body:
+                        JSON.stringify(
+                            updateData
+                        )
+                }
             );
 
-            userMessage.textContent =
-                "Something went wrong.";
 
+        const data =
+            await response.json();
+
+
+        if (response.status === 401) {
+            logout();
+            return;
         }
 
-    }
-);
 
+        if (response.status === 403) {
 
-// =================================================
-// ================= DELETE USER MODAL ==============
-// =================================================
-
-function openDeleteUserModal(currentUser) {
-
-    if (
-        currentUser._id === user.id ||
-        currentUser._id === user._id
-    ) {
-
-        return;
-
-    }
-
-
-    deletingUserId =
-        currentUser._id;
-
-
-    deleteUserText.textContent =
-        `Are you sure you want to delete "${currentUser.name}"?`;
-
-
-    deleteUserMessage.textContent =
-        "";
-
-
-    deleteUserModal.style.display =
-        "flex";
-
-}
-
-
-function closeDeleteUserModal() {
-
-    deleteUserModal.style.display =
-        "none";
-
-    deletingUserId =
-        null;
-
-    deleteUserMessage.textContent =
-        "";
-
-}
-
-
-closeDeleteUserModalBtn.addEventListener(
-    "click",
-    closeDeleteUserModal
-);
-
-
-cancelDeleteUserBtn.addEventListener(
-    "click",
-    closeDeleteUserModal
-);
-
-
-deleteUserModal.addEventListener(
-    "click",
-    event => {
-
-        if (
-            event.target ===
-            deleteUserModal
-        ) {
-
-            closeDeleteUserModal();
-
-        }
-
-    }
-);
-
-
-// =================================================
-// ================= CONFIRM DELETE USER ===========
-// =================================================
-
-confirmDeleteUserBtn.addEventListener(
-    "click",
-    async () => {
-
-        if (!deletingUserId) {
+            alert(
+                "Access denied. Admin only."
+            );
 
             return;
-
         }
 
 
-        try {
+        if (!response.ok) {
 
-            confirmDeleteUserBtn.disabled =
-                true;
-
-            confirmDeleteUserBtn.textContent =
-                "Deleting...";
-
-
-            const response =
-                await fetch(
-                    `/users/${deletingUserId}`,
-                    {
-
-                        method: "DELETE",
-
-                        headers: {
-
-                            Authorization:
-                                `Bearer ${token}`
-
-                        }
-
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (response.status === 401) {
-
-                logout();
-
-                return;
-
-            }
-
-
-            if (response.status === 403) {
-
-                deleteUserMessage.textContent =
-                    "Access denied.";
-
-                return;
-
-            }
-
-
-            if (!response.ok) {
-
-                deleteUserMessage.textContent =
-                    data.message ||
-                    "Failed to delete user";
-
-                return;
-
-            }
-
-
-            closeDeleteUserModal();
-
-            await getUsers();
-
-
-        } catch (error) {
-
-            console.error(
-                "Delete user error:",
-                error
+            alert(
+                data.message ||
+                "Failed to update user."
             );
 
-            deleteUserMessage.textContent =
-                "Something went wrong.";
-
+            return;
         }
 
 
-        finally {
+        // If admin edited himself,
+        // update localStorage
+        if (
+            String(currentUser._id) ===
+            String(user.id)
+        ) {
 
-            confirmDeleteUserBtn.disabled =
-                false;
+            user.name =
+                updateData.name;
 
-            confirmDeleteUserBtn.textContent =
-                "Delete";
+            user.email =
+                updateData.email;
 
+            localStorage.setItem(
+                "user",
+                JSON.stringify(user)
+            );
+
+            userName.textContent =
+                user.name;
+
+            userEmail.textContent =
+                user.email;
         }
 
+
+        alert(
+            "User updated successfully!"
+        );
+
+
+        await getUsers();
+
+
+    } catch (error) {
+
+        console.error(
+            "Edit user error:",
+            error
+        );
+
+        alert(
+            "Something went wrong."
+        );
     }
-);
+}
 
 
 // =================================================
-// ================= REFRESH USERS ==================
+// ================= DELETE USER ===================
 // =================================================
 
-refreshUsersBtn.addEventListener(
-    "click",
-    getUsers
-);
+async function deleteUser(id) {
+
+    // Extra protection
+    if (String(id) === String(user.id)) {
+
+        alert(
+            "You cannot delete your own account."
+        );
+
+        return;
+    }
+
+
+    const confirmed =
+        confirm(
+            "Are you sure you want to delete this user?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/users/${id}`,
+                {
+                    method: "DELETE",
+
+                    headers: {
+                        Authorization:
+                            `Bearer ${token}`
+                    }
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (response.status === 401) {
+
+            logout();
+            return;
+        }
+
+
+        if (response.status === 403) {
+
+            alert(
+                "Access denied. Admin only."
+            );
+
+            return;
+        }
+
+
+        if (!response.ok) {
+
+            alert(
+                data.message ||
+                "Failed to delete user."
+            );
+
+            return;
+        }
+
+
+        alert(
+            "User deleted successfully!"
+        );
+
+
+        await getUsers();
+
+
+    } catch (error) {
+
+        console.error(
+            "Delete user error:",
+            error
+        );
+
+        alert(
+            "Something went wrong."
+        );
+    }
+}
+
+
+// =================================================
+// ================= REFRESH USERS =================
+// =================================================
+
+if (refreshUsersBtn) {
+
+    refreshUsersBtn.addEventListener(
+        "click",
+        getUsers
+    );
+}
+
+
+// =================================================
+// ================= LOGOUT ========================
+// =================================================
+
+function logout() {
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    window.location.href = "/";
+}
+
+
+if (logoutBtn) {
+
+    logoutBtn.addEventListener(
+        "click",
+        logout
+    );
+}
 
 
 // =================================================
@@ -1666,9 +1296,6 @@ refreshUsersBtn.addEventListener(
 
 getBooks();
 
-
-if (user.role === "admin") {
-
+if (isAdmin) {
     getUsers();
-
 }

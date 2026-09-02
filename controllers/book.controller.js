@@ -1,9 +1,16 @@
 const Book = require("../models/book.model");
 
-// CREATE BOOK
+// ================= CREATE BOOK =================
+
 const createBook = async (req, res, next) => {
     try {
-        const book = await Book.create(req.body);
+        const { title, price, author } = req.body;
+
+        const book = await Book.create({
+            title,
+            price,
+            author
+        });
 
         res.status(201).json(book);
 
@@ -12,7 +19,9 @@ const createBook = async (req, res, next) => {
     }
 };
 
-// GET ALL BOOKS
+
+// ================= GET ALL BOOKS =================
+
 const getBooks = async (req, res, next) => {
     try {
         const books = await Book.find();
@@ -24,7 +33,9 @@ const getBooks = async (req, res, next) => {
     }
 };
 
-// GET BOOK BY ID
+
+// ================= GET BOOK BY ID =================
+
 const getBook = async (req, res, next) => {
     try {
         const book = await Book.findById(req.params.id);
@@ -42,12 +53,20 @@ const getBook = async (req, res, next) => {
     }
 };
 
-// UPDATE BOOK
+
+// ================= UPDATE BOOK =================
+
 const updateBook = async (req, res, next) => {
     try {
+        const { title, price, author } = req.body;
+
         const book = await Book.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            {
+                title,
+                price,
+                author
+            },
             {
                 new: true,
                 runValidators: true
@@ -67,7 +86,9 @@ const updateBook = async (req, res, next) => {
     }
 };
 
-// DELETE BOOK
+
+// ================= DELETE BOOK =================
+
 const deleteBook = async (req, res, next) => {
     try {
         const book = await Book.findByIdAndDelete(req.params.id);
@@ -86,6 +107,7 @@ const deleteBook = async (req, res, next) => {
         next(error);
     }
 };
+
 
 module.exports = {
     createBook,
