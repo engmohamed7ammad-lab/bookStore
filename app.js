@@ -55,10 +55,17 @@ app.use(errorHandler);
 
 //  HOME 
 
+app.get("/register.html", (req, res) => {
+    res.sendFile(__dirname + "/public/register.html");
+});
+
+app.get("/dashboard.html", (req, res) => {
+    res.sendFile(__dirname + "/public/dashboard.html");
+});
+
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/public/index.html");
 });
-
 //  SERVER 
 
 const PORT = process.env.PORT || 3000;
