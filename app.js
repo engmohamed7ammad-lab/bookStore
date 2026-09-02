@@ -1,46 +1,51 @@
 require("dotenv").config();
 
+const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 
-const express = require("express");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/error.middleware");
 
 const app = express();
+
+// ================= PROXY =================
+
 app.set("trust proxy", 1);
 
-//  DATABASE 
+// ================= DATABASE =================
 
 connectDB();
 
-
-//  MIDDLEWARE 
+// ================= MIDDLEWARE =================
 
 app.use(express.json());
 
-app.use(express.static("public"));
-
-// ================= CORS =================
-
 app.use(cors());
 
+// ================= STATIC FILES =================
+
+app.use(express.static(path.join(__dirname, "public")));
 
 // ================= RATE LIMITING =================
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
+
     keyGenerator: (req) => {
         return req.ip;
     },
+
     message: {
         message: "Too many requests, please try again later."
     }
 });
+
 app.use(limiter);
 
-//  ROUTES 
+// ================= ROUTES =================
 
 const bookRoutes = require("./routes/book.routes");
 const userRoutes = require("./routes/user.routes");
@@ -49,24 +54,29 @@ const authRoutes = require("./routes/auth.routes");
 app.use("/books", bookRoutes);
 app.use("/users", userRoutes);
 app.use("/auth", authRoutes);
+
+// ================= HTML PAGES =================
+
+// Login page
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Register page
+app.get("/register.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "register.html"));
+});
+
+// Dashboard page
+app.get("/dashboard.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+});
+
+// ================= ERROR HANDLER =================
+
 app.use(errorHandler);
 
-
-
-//  HOME 
-
-app.get("/register.html", (req, res) => {
-    res.sendFile(__dirname + "/public/register.html");
-});
-
-app.get("/dashboard.html", (req, res) => {
-    res.sendFile(__dirname + "/public/dashboard.html");
-});
-
-app.get("/", (req, res) => {
-    res.sendFile(__dirname + "/public/index.html");
-});
-//  SERVER 
+// ================= SERVER =================
 
 const PORT = process.env.PORT || 3000;
 
