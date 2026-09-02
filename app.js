@@ -56,11 +56,8 @@ app.use(errorHandler);
 //  HOME 
 
 app.get("/", (req, res) => {
-    res.json({
-        message: "Book Store API is working"
-    });
+    res.sendFile(__dirname + "/public/index.html");
 });
-
 
 //  SERVER 
 
