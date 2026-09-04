@@ -33,16 +33,10 @@ app.use(express.static(path.join(__dirname, "public")));
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-
-    keyGenerator: (req) => {
-        return req.ip;
-    },
-
     message: {
         message: "Too many requests, please try again later."
     }
 });
-
 app.use(limiter);
 
 // ================= ROUTES =================
@@ -55,7 +49,7 @@ app.use("/books", bookRoutes);
 app.use("/users", userRoutes);
 app.use("/auth", authRoutes);
 
-// ================= HTML PAGES =================
+//  HTML PAGES 
 
 // Login page
 app.get("/", (req, res) => {
@@ -72,11 +66,11 @@ app.get("/dashboard.html", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
 
-// ================= ERROR HANDLER =================
+//  ERROR HANDLER 
 
 app.use(errorHandler);
 
-// ================= SERVER =================
+//  SERVER 
 
 const PORT = process.env.PORT || 3000;
 
