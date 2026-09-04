@@ -16,7 +16,9 @@ app.set("trust proxy", 1);
 
 // ================= DATABASE =================
 
-connectDB();
+if (process.env.NODE_ENV !== "production") {
+    connectDB();
+}
 
 // ================= MIDDLEWARE =================
 
